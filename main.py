@@ -4,7 +4,7 @@ from collections import defaultdict
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 # ВАЖНО: Вставьте сюда свой токен
-BOT_TOKEN = '8543815916:AAEvjpxHjsjfJKBCjAOnvh-2of4aIoFDtdY'
+BOT_TOKEN = ''
 
 bot = telebot.TeleBot(BOT_TOKEN)
 games = {}
