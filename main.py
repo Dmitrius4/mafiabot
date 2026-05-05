@@ -2,6 +2,7 @@ import telebot
 import random
 from collections import defaultdict
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+from database import load_data, save_data
 
 # ВАЖНО: Вставьте сюда свой токен
 BOT_TOKEN = ''
@@ -674,6 +675,33 @@ def end_game(message):
     if game and game.gm_id == message.from_user.id:
         del games[message.chat.id]
         bot.reply_to(message, "Игра принудительно завершена.")
+
+
+def update_stats(game, winner_faction):
+    db = load_data()
+    chat_id_str = str(game.chat_id)
+
+    if chat_id_str not in db:
+        db[chat_id_str] = {}
+
+    for player in game.players.values():
+        player_id_str = str(player.id)
+
+        # Инициализируем игрока, если его нет в БД
+        if player_id_str not in db[chat_id_str]:
+            db[chat_id_str][player_id_str] = {
+                "username": player.tag, "rating": 0, "wins": 0, "losses": 0,
+                "games_played": 0, "roles_played": {}
+            }
+
+        # Обновляем статистику
+        stats = db[chat_id_str][player_id_str]
+        stats["username"] = player.tag  # Обновляем имя/тег на случай смены
+        stats["games_played"] += 1
+
+        # ... тут будет логика начисления рейтинга ...
+
+    save_data(db)
 
 
 if __name__ == '__main__':
