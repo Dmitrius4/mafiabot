@@ -122,7 +122,6 @@ class Player:
         self.night_target = None
         self.night_target2 = None
         self.night_action_done = False
-        self.voted_for = None
 
 class Game:
     def __init__(self, chat_id, gm_id):
@@ -205,11 +204,7 @@ class Game:
         night_actions = defaultdict(dict)
         for p in self.get_alive_players():
             if p.night_action_done:
-                night_actions[p.role][p.id] = {
-                    'target': p.night_target,
-                    'target2': p.night_target2,
-                    'player': p
-                }
+                night_actions[p.role][p.id] = {'target': p.night_target, 'target2': p.night_target2, 'player': p}
 
         public_log = []
         private_logs = defaultdict(str)
@@ -223,7 +218,6 @@ class Game:
                 except Exception:
                     p1 = None
                     p2 = None
-
                 if p1 and p2 and p1 != p2:
                     p1.in_love_with = p2.id
                     p2.in_love_with = p1.id
@@ -246,7 +240,6 @@ class Game:
                 target = self.get_player(int(action['target'])) if str(action['target']).isdigit() else None
                 if not target:
                     continue
-
                 if role == 'Тюремщик':
                     target.is_jailed = True
                     private_logs[player.id] += f"Вы посадили {target.tag} в тюрьму.\n"
@@ -277,7 +270,6 @@ class Game:
                 target = self.get_player(int(action['target'])) if str(action['target']).isdigit() else None
                 if not target or not target.is_alive:
                     continue
-
                 if target.is_on_alert:
                     deaths[killer.id].append(target)
                 else:
@@ -288,14 +280,12 @@ class Game:
             target = self.get_player(target_id)
             if not target or not target.is_alive:
                 continue
-
             if target.is_jailed or target.is_blocked:
                 public_log.append(f"Нападение на {target.tag} не удалось, он(а) был(а) под защитой.")
                 continue
             if target.is_healed:
                 public_log.append(f"{target.tag} был(а) атакован(а), но Доктор его спас!")
                 continue
-
             target.is_alive = False
             dead_this_night.append(target)
 
@@ -478,8 +468,7 @@ def new_game(message):
         return
 
     games[message.chat.id] = Game(message.chat.id, message.from_user.id)
-    bot.send_message(message.chat.id, f"Новая игра создана! Ведущий: {message.from_user.first_name}.\n"
-                                      f"Игроки, жмите /join, чтобы присоединиться.")
+    bot.send_message(message.chat.id, f"Новая игра создана! Ведущий: {message.from_user.first_name}.\nИгроки, жмите /join, чтобы присоединиться.")
 
 @bot.message_handler(commands=['join'])
 def join_game(message):
@@ -545,16 +534,13 @@ def send_action_keyboard(player, game):
         exclude = [] if role == 'Доктор' else [player.id]
         buttons = [InlineKeyboardButton(text=p.tag, callback_data=f"act:target:{p.id}") for p in game.get_alive_players(exclude_ids=exclude)]
         markup.add(*buttons, row_width=2)
-
     elif role in ['Амур', 'Журналист', 'Почтальон']:
         text = f"Ваша роль: {role}. Выберите ПЕРВОГО игрока:"
         buttons = [InlineKeyboardButton(text=p.tag, callback_data=f"act:target1:{p.id}") for p in game.get_alive_players(exclude_ids=[player.id])]
         markup.add(*buttons, row_width=2)
-
     elif role == 'Ветеран' and player.vet_charges > 0:
         markup.add(InlineKeyboardButton(text="🚨 Встать на охрану", callback_data="act:target:alert"))
         markup.add(InlineKeyboardButton(text="💤 Спать спокойно", callback_data="act:target:pass"))
-
     else:
         text = f"Ваша роль: {role}. У вас нет активного ночного действия."
 
@@ -591,15 +577,10 @@ def handle_action_callback(call):
                 player.night_target = value
             else:
                 player.night_target = int(value)
-
             is_final_action = True
             target_player = game.get_player(int(value)) if value.isdigit() else None
             chosen = target_player.tag if target_player else ("боевую готовность" if value == "alert" else "пасс")
-            bot.edit_message_text(
-                f"Ваш выбор принят: {chosen}.",
-                call.message.chat.id,
-                call.message.message_id
-            )
+            bot.edit_message_text(f"Ваш выбор принят: {chosen}.", call.message.chat.id, call.message.message_id)
 
         elif action_type == 'target1':
             player.night_target = int(value)
@@ -607,23 +588,14 @@ def handle_action_callback(call):
             markup = InlineKeyboardMarkup()
             buttons = [InlineKeyboardButton(text=p.tag, callback_data=f"act:target2:{p.id}") for p in game.get_alive_players(exclude_ids=[player.id, player.night_target])]
             markup.add(*buttons, row_width=2)
-            bot.edit_message_text(
-                f"Первый выбор: {target1_player.tag}. Теперь выберите второго игрока:",
-                call.message.chat.id,
-                call.message.message_id,
-                reply_markup=markup
-            )
+            bot.edit_message_text(f"Первый выбор: {target1_player.tag}. Теперь выберите второго игрока:", call.message.chat.id, call.message.message_id, reply_markup=markup)
 
         elif action_type == 'target2':
             player.night_target2 = int(value)
             is_final_action = True
             target1_player = game.get_player(player.night_target)
             target2_player = game.get_player(player.night_target2)
-            bot.edit_message_text(
-                f"Ваш выбор принят: {target1_player.tag} и {target2_player.tag}.",
-                call.message.chat.id,
-                call.message.message_id
-            )
+            bot.edit_message_text(f"Ваш выбор принят: {target1_player.tag} и {target2_player.tag}.", call.message.chat.id, call.message.message_id)
         else:
             bot.answer_callback_query(call.id, "Неизвестное действие.")
             return
@@ -639,15 +611,21 @@ def handle_action_callback(call):
             role_to_notify = None
 
         if role_to_notify and role_to_notify in NIGHT_ACTION_MESSAGES:
-            message_text = NIGHT_ACTION_MESSAGES[role_to_notify]
-            bot.send_message(game.chat_id, message_text)
+            bot.send_message(game.chat_id, NIGHT_ACTION_MESSAGES[role_to_notify])
 
     bot.answer_callback_query(call.id, "Ход принят!")
 
 @bot.message_handler(commands=['endnight'])
 def end_night(message):
     game = games.get(message.chat.id)
-    if not game or game.gm_id != message.from_user.id or game.state != 'NIGHT':
+    if not game:
+        bot.reply_to(message, "В этой группе нет активной игры.")
+        return
+    if game.gm_id != message.from_user.id:
+        bot.reply_to(message, "Только ведущий может завершать ночь.")
+        return
+    if game.state != 'NIGHT':
+        bot.reply_to(message, f"Сейчас нет активной ночи. Текущее состояние игры: {game.state}")
         return
 
     game.state = 'DAY'
